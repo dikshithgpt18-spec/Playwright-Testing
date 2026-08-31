@@ -1,0 +1,36 @@
+{
+  "name": "playwright",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:login": "playwright test tests/login/",
+    "test:loginperformance": "playwright test tests/login/loginperformance.spec.js",
+    "test:loginpageperform": "playwright test tests/login/loginpageperform.spec.js --project=chromium",
+    "test:loginpageperform1": "playwright test tests/login/loginpageperform1.spec.js --project=chromium",
+    "test:loginsecurity": "playwright test tests/login/loginsecurity.spec.js --project=chromium",
+    "test:pages:admin": "playwright test tests/pagesoperations/admin.spec.js --project=chromium",
+    "test:pages:analytics": "playwright test tests/pagesoperations/analyticspage.spec.js --project=chromium",
+    "test:pages:automation": "playwright test tests/pagesoperations/automationpage.spec.js --project=chromium",
+    "test:pages:master": "playwright test tests/pagesoperations/masterpages.spec.js --project=chromium",
+    "test:pages:monitor": "playwright test tests/pagesoperations/monitor.spec.js --project=chromium",
+    "test:pages:warranty": "playwright test tests/pagesoperations/warrantypage.spec.js --project=chromium",
+    "test:pages:multitab": "playwright test tests/pagesoperations/multitab_operations.spec.js --project=chromium --headed",
+    "test:cu:edit": "playwright test tests/cu/editcode.spec.js --project=chromium",
+    "test:cu:curd": "playwright test tests/cu/creandread.spec.js --project=chromium",
+    "test:cu:curdparallel": "playwright test tests/cu/creandreadpara.spec.js --project=chromium --headed",
+    "test:cu:editparallel": "playwright test tests/cu/editcodepara.spec.js --project=chromium --headed",
+    "report": "playwright show-report --port 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "dotenv": "^17.4.2"
+  }
+}
