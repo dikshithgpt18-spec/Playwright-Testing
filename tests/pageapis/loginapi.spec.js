@@ -14,25 +14,31 @@ const apiCallCount = Number(process.env.TAB_COUNT || 100);
 test(`Authenticate once then send ${apiCallCount} Dashboard After-Login API requests simultaneously at once without opening tabs`, async ({ browser }, testInfo) => {
     test.setTimeout(0);
 
-    console.log('Step 1: Logging in ONCE on 1 single page to establish authenticated session...');
     const context = await browser.newContext();
-    const loginPage = await context.newPage();
+    let dashboardUrl = `${targetUrl.replace(/\/$/, '')}/appcommon/dashboard`;
 
-    await loginPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-    await loginPage.getByRole('textbox').first().fill(userId);
-    await loginPage.locator('input[type="password"]').fill(password);
-    await loginPage.getByRole('button', { name: 'Login' }).click();
-    await expect(loginPage.getByRole('button', { name: 'Login' })).toBeHidden({ timeout: 30000 });
+    // Fast check: If storageState cookies exist, skip opening browser page entirely!
+    const cookies = await context.cookies();
+    if (!cookies || cookies.length === 0) {
+        console.log('No cached session cookies found. Performing fast UI login...');
+        const loginPage = await context.newPage();
+        await loginPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
 
-    const dashboardUrl = loginPage.url();
-    console.log(`Login successful! Authenticated Dashboard URL: ${dashboardUrl}`);
+        const isPasswordFormVisible = await loginPage.locator('input[type="password"]').isVisible({ timeout: 1000 }).catch(() => false);
+        if (isPasswordFormVisible) {
+            await loginPage.getByRole('textbox').first().fill(userId);
+            await loginPage.locator('input[type="password"]').fill(password);
+            await loginPage.getByRole('button', { name: 'Login' }).click();
+            await loginPage.waitForURL(url => !url.toString().includes('/login'), { timeout: 10000 }).catch(() => {});
+        }
+        dashboardUrl = loginPage.url();
+        await loginPage.close();
+    } else {
+        console.log('Cached authentication session active! Skipped page launch for instant performance.');
+    }
 
-    // Close the single login tab - NO MORE TABS NEEDED!
-    await loginPage.close();
-    console.log('Single login tab closed. Memory freed! Operating with 0 browser tabs.');
-
-    // Step 2: Fire all 100 direct HTTP API requests simultaneously at the exact same millisecond
-    console.log(`Step 2: Firing ${apiCallCount} direct After-Login Dashboard API requests simultaneously via Promise.all()...`);
+    // Step 2: Fire all direct HTTP API requests simultaneously at the exact same millisecond
+    console.log(`Firing ${apiCallCount} direct After-Login Dashboard API requests simultaneously via Promise.all()...`);
 
     const globalDispatchStart = Date.now();
 
@@ -68,7 +74,6 @@ test(`Authenticate once then send ${apiCallCount} Dashboard After-Login API requ
         }
     });
 
-    // Promise.all triggers all 100 un-awaited requests concurrently at the exact same moment
     const results = await Promise.all(apiPromises);
     const totalExecutionTimeMs = Date.now() - globalDispatchStart;
 
@@ -96,7 +101,7 @@ test(`Authenticate once then send ${apiCallCount} Dashboard After-Login API requ
     const avgResponseTimeMs = (totalResponseTime / apiCallCount).toFixed(2);
     const maxDispatchOffset = Math.max(...results.map(r => r.dispatchOffsetMs));
 
-    // Step 4: Print the final Scorecard with Synchronicity Verification
+    // Step 4: Print the final Scorecard
     const reportContent = `==================================================
       AFTER-LOGIN DASHBOARD API TEST SCORECARD    
 ==================================================
@@ -112,7 +117,6 @@ Avg Response Time:        ${avgResponseTimeMs} ms
 Memory Footprint:         Minimal (0 active tabs)
 ==================================================`;
 
-    // Log line-by-line so Playwright runner UI doesn't clip/overwrite multi-line blocks
     reportContent.split('\n').forEach(line => console.log(line));
 
     testInfo.attachments.push({

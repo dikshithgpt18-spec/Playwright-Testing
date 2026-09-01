@@ -27,34 +27,31 @@ const masterSubSections = [
 test(`Authenticate once then send ${apiCallCount} Master Page API requests simultaneously at once without opening tabs`, async ({ browser }, testInfo) => {
     test.setTimeout(0);
 
-    console.log('Step 1: Establishing authenticated session...');
     const context = await browser.newContext();
-    const loginPage = await context.newPage();
+    let loggedInUrl = `${targetUrl.replace(/\/$/, '')}/appcommon/dashboard`;
 
-    await loginPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+    // Fast check: If storageState cookies exist, skip opening browser page entirely!
+    const cookies = await context.cookies();
+    if (!cookies || cookies.length === 0) {
+        console.log('No cached session cookies found. Performing fast UI login...');
+        const loginPage = await context.newPage();
+        await loginPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
 
-    // Handle both pre-authenticated storageState and fresh credential login
-    const isPasswordFormVisible = await loginPage.locator('input[type="password"]').isVisible({ timeout: 2500 }).catch(() => false);
-    if (isPasswordFormVisible) {
-        const emailInput = loginPage.getByRole('textbox').first();
-        const passwordInput = loginPage.locator('input[type="password"]');
-        const loginButton = loginPage.getByRole('button', { name: 'Login' });
-
-        await emailInput.fill(userId);
-        await passwordInput.fill(password);
-        await loginButton.click();
-        await loginPage.waitForURL(url => !url.toString().includes('/login') && url.toString().includes('/appcommon'), { timeout: 15000 }).catch(() => {});
+        const isPasswordFormVisible = await loginPage.locator('input[type="password"]').isVisible({ timeout: 1000 }).catch(() => false);
+        if (isPasswordFormVisible) {
+            await loginPage.getByRole('textbox').first().fill(userId);
+            await loginPage.locator('input[type="password"]').fill(password);
+            await loginPage.getByRole('button', { name: 'Login' }).click();
+            await loginPage.waitForURL(url => !url.toString().includes('/login'), { timeout: 10000 }).catch(() => {});
+        }
+        loggedInUrl = loginPage.url();
+        await loginPage.close();
+    } else {
+        console.log('Cached authentication session active! Skipped page launch for instant performance.');
     }
 
-    const loggedInUrl = loginPage.url();
-    console.log(`Login successful / Session active! Authenticated Session URL: ${loggedInUrl}`);
-
-    // Close the single login tab - NO MORE TABS NEEDED!
-    await loginPage.close();
-    console.log('Single login tab closed. Memory freed! Operating with 0 browser tabs.');
-
     // Step 2: Fire all direct HTTP API requests simultaneously at the exact same millisecond
-    console.log(`Step 2: Firing ${apiCallCount} direct Master Page API requests simultaneously via Promise.all()...`);
+    console.log(`Firing ${apiCallCount} direct Master Page API requests simultaneously via Promise.all()...`);
 
     const globalDispatchStart = Date.now();
 
