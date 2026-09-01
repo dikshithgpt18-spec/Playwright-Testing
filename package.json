@@ -22,6 +22,8 @@
     "test:cu:curd": "playwright test tests/cu/creandread.spec.js --project=chromium",
     "test:cu:curdparallel": "playwright test tests/cu/creandreadpara.spec.js --project=chromium --headed",
     "test:cu:editparallel": "playwright test tests/cu/editcodepara.spec.js --project=chromium --headed",
+    "test:loginapi": "playwright test tests/pageapis/loginapi.spec.js --project=chromium --reporter=list",
+    "test:afterloginapi": "playwright test tests/pageapis/afterloginapi.spec.js --project=chromium --reporter=list",
     "report": "playwright show-report --port 0"
   },
   "keywords": [],
