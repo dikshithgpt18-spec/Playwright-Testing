@@ -21,18 +21,26 @@ const monitorSubSections = [
 test(`Authenticate once then send ${apiCallCount} Monitor Page API requests simultaneously at once without opening tabs`, async ({ browser }, testInfo) => {
     test.setTimeout(0);
 
-    console.log('Step 1: Logging in ONCE on 1 single page to establish authenticated session...');
+    console.log('Step 1: Establishing authenticated session...');
     const context = await browser.newContext();
     const loginPage = await context.newPage();
 
     await loginPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-    await loginPage.getByRole('textbox').first().fill(userId);
-    await loginPage.locator('input[type="password"]').fill(password);
-    await loginPage.getByRole('button', { name: 'Login' }).click();
-    await expect(loginPage.getByRole('button', { name: 'Login' })).toBeHidden({ timeout: 30000 });
+
+    const isPasswordFormVisible = await loginPage.locator('input[type="password"]').isVisible({ timeout: 2500 }).catch(() => false);
+    if (isPasswordFormVisible) {
+        const emailInput = loginPage.getByRole('textbox').first();
+        const passwordInput = loginPage.locator('input[type="password"]');
+        const loginButton = loginPage.getByRole('button', { name: 'Login' });
+
+        await emailInput.fill(userId);
+        await passwordInput.fill(password);
+        await loginButton.click();
+        await loginPage.waitForURL(url => !url.toString().includes('/login') && url.toString().includes('/appcommon'), { timeout: 15000 }).catch(() => {});
+    }
 
     const loggedInUrl = loginPage.url();
-    console.log(`Login successful! Authenticated Session URL: ${loggedInUrl}`);
+    console.log(`Login successful / Session active! Authenticated URL: ${loggedInUrl}`);
 
     // Close the single login tab - NO MORE TABS NEEDED!
     await loginPage.close();

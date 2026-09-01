@@ -6,19 +6,14 @@ const userId = process.env.USER_ID || 'superadminmartinrea1@martinrea.com';
 const password = process.env.PASSWORD || 'Dell@123';
 const apiCallCount = Number(process.env.TAB_COUNT || 100);
 
-const automationSubSections = [
-    'Plant Customer Cross Ref',
-    'Program Mapping',
-    'Program Variant',
-    'Task',
-    'Scheduler',
+const analyticsSubSections = [
+    'Scorecard',
+    'Report Configurator',
+    'Criteria',
+    'Report Generator',
     'Setups',
-    'Adapters',
-    'Logical System',
-    'Internal Customer Cross Ref',
-    'Screen Configuration',
-    'Mail',
-    'FTP/SFTP'
+    'Report Configurator V2',
+    'Report Criteria'
 ];
 
 /**
@@ -26,7 +21,7 @@ const automationSubSections = [
  * @param {import('@playwright/test').Browser} fixtures.browser
  * @param {import('@playwright/test').TestInfo} testInfo
  */
-test(`Authenticate once then send ${apiCallCount} Automation Page API requests simultaneously at once without opening tabs`, async ({ browser }, testInfo) => {
+test(`Authenticate once then send ${apiCallCount} Analytics Page API requests simultaneously at once without opening tabs`, async ({ browser }, testInfo) => {
     test.setTimeout(0);
 
     console.log('Step 1: Establishing authenticated session...');
@@ -55,13 +50,13 @@ test(`Authenticate once then send ${apiCallCount} Automation Page API requests s
     console.log('Single login tab closed. Memory freed! Operating with 0 browser tabs.');
 
     // Step 2: Fire all direct HTTP API requests simultaneously at the exact same millisecond
-    console.log(`Step 2: Firing ${apiCallCount} direct Automation Page API requests simultaneously via Promise.all()...`);
+    console.log(`Step 2: Firing ${apiCallCount} direct Analytics Page API requests simultaneously via Promise.all()...`);
 
     const globalDispatchStart = Date.now();
 
     const apiPromises = Array.from({ length: apiCallCount }).map(async (_, idx) => {
         const reqId = idx + 1;
-        const sectionName = automationSubSections[idx % automationSubSections.length];
+        const sectionName = analyticsSubSections[idx % analyticsSubSections.length];
         const dispatchOffsetMs = Date.now() - globalDispatchStart;
         const requestStart = Date.now();
 
@@ -123,10 +118,10 @@ test(`Authenticate once then send ${apiCallCount} Automation Page API requests s
 
     // Step 4: Print the final Scorecard
     const reportContent = `==================================================
-      AUTOMATION PAGES AFTER-LOGIN API SCORECARD    
+      ANALYTICS PAGES AFTER-LOGIN API SCORECARD   
 ==================================================
-Target Module:            Automation Pages (${automationSubSections.length} Sections)
-Sub-Sections Tested:      ${automationSubSections.join(', ')}
+Target Module:            Analytics Pages (${analyticsSubSections.length} Sections)
+Sub-Sections Tested:      ${analyticsSubSections.join(', ')}
 Total Parallel API Calls: ${results.length}
 Passed:                   ${passedCount}
 Failed:                   ${failedCount}
@@ -141,19 +136,19 @@ Memory Footprint:         Minimal (0 active tabs)
     reportContent.split('\n').forEach(line => console.log(line));
 
     testInfo.attachments.push({
-        name: 'Automation Pages API Performance Report.txt',
+        name: 'Analytics Pages API Performance Report.txt',
         contentType: 'text/plain',
         body: Buffer.from(reportContent, 'utf-8'),
     });
 
     testInfo.attachments.push({
-        name: 'Automation Pages API Metrics.json',
+        name: 'Analytics Pages API Metrics.json',
         contentType: 'application/json',
         body: Buffer.from(
             JSON.stringify(
                 {
-                    module: 'Automation Pages',
-                    subSections: automationSubSections,
+                    module: 'Analytics Pages',
+                    subSections: analyticsSubSections,
                     totalCalls: results.length,
                     passed: passedCount,
                     failed: failedCount,
@@ -172,7 +167,7 @@ Memory Footprint:         Minimal (0 active tabs)
 
     testInfo.annotations.push({
         type: 'Performance Summary',
-        description: `Automation APIs | Hits: ${results.length} | Passed: ${passedCount} | Duration: ${(totalExecutionTimeMs / 1000).toFixed(1)}s`,
+        description: `Analytics APIs | Hits: ${results.length} | Passed: ${passedCount} | Duration: ${(totalExecutionTimeMs / 1000).toFixed(1)}s`,
     });
 
     await context.close();
