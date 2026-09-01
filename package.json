@@ -24,6 +24,13 @@
     "test:cu:editparallel": "playwright test tests/cu/editcodepara.spec.js --project=chromium --headed",
     "test:loginapi": "playwright test tests/pageapis/loginapi.spec.js --project=chromium --reporter=list",
     "test:afterloginapi": "playwright test tests/pageapis/afterloginapi.spec.js --project=chromium --reporter=list",
+    "test:api:admin": "playwright test tests/pageapis/admin.spec.js --project=chromium --reporter=list",
+    "test:api:analytics": "playwright test tests/pageapis/analyticspage.spec.js --project=chromium --reporter=list",
+    "test:api:automation": "playwright test tests/pageapis/automationpage.spec.js --project=chromium --reporter=list",
+    "test:api:master": "playwright test tests/pageapis/masterpages.spec.js --project=chromium --reporter=list",
+    "test:api:monitor": "playwright test tests/pageapis/monitor.spec.js --project=chromium --reporter=list",
+    "test:api:warranty": "playwright test tests/pageapis/warrantypage.spec.js --project=chromium --reporter=list",
+    "test:api:multitab": "playwright test tests/pageapis/multitab_operations.spec.js --project=chromium --reporter=list",
     "report": "playwright show-report --port 0"
   },
   "keywords": [],
