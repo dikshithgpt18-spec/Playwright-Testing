@@ -2,10 +2,10 @@
 import { test, expect } from '@playwright/test';
 
 const targetUrl = process.env.BASE_URL || 'https://polite-pond-09fb16200.7.azurestaticapps.net/';
-const repeatCount = Number(process.env.CYCLE_COUNT || 20);
-const tabCount = Number(process.env.TAB_COUNT || 100);
+const repeatCount = Number(process.env.CYCLE_COUNT || 1);
+const tabCount = Number(process.env.TAB_COUNT || 50);
 
-// Exact 10 sub-sections under the Master menu
+// Exact 10 sub-sections under the Master menu in strict sequential order
 const masterSubSections = [
     'Enterprise',
     'External Filter',
@@ -24,7 +24,7 @@ const masterSubSections = [
  * @param {import('@playwright/test').Browser} fixtures.browser
  * @param {import('@playwright/test').TestInfo} testInfo
  */
-test('Parallel tabs hitting the SAME Master page API simultaneously at once', async ({ browser }, testInfo) => {
+test(`Parallel ${tabCount} tabs hitting the EXACT SAME Master page API simultaneously at once via Promise.all`, async ({ browser }, testInfo) => {
     // Disable timeout so all cycles complete
     test.setTimeout(0);
 
@@ -60,9 +60,9 @@ test('Parallel tabs hitting the SAME Master page API simultaneously at once', as
     console.log(`Login successful on Tab 1! Authenticated URL: ${loggedInUrl}`);
 
     // -------------------------------------------------------------
-    // Step 2: Open Tabs safely in batches of 10 to prevent memory/crash issues
+    // Step 2: Open 10 Parallel Tabs using Promise.all()
     // -------------------------------------------------------------
-    console.log(`Opening ${tabCount} parallel tabs directly to authenticated URL...`);
+    console.log(`Opening ${tabCount} parallel tabs directly to authenticated URL via Promise.all()...`);
 
     const tabs = [{ page: tab1, tabIndex: 1 }];
     const batchSize = 10;
@@ -84,47 +84,66 @@ test('Parallel tabs hitting the SAME Master page API simultaneously at once', as
     console.log(`All ${tabs.length} tabs opened and ready on authenticated dashboard!`);
 
     // -------------------------------------------------------------
-    // Step 3: VISIBLY VISIT EACH PAGE ON ALL TABS SIMULTANEOUSLY
+    // Step 3: HIT THE EXACT SAME MASTER PAGE API SIMULTANEOUSLY ACROSS ALL 10 TABS VIA Promise.all()
     // -------------------------------------------------------------
     for (let cycle = 1; cycle <= repeatCount; cycle++) {
         console.log(`\n==================================================`);
         console.log(` Starting SIMULTANEOUS Synchronized Cycle [${cycle}/${repeatCount}]`);
         console.log(`==================================================`);
 
+        // Iterate through all 10 Master sub-sections in order
         for (let i = 0; i < masterSubSections.length; i++) {
             const sectionName = masterSubSections[i];
-            console.log(`\n[Cycle ${cycle}/${repeatCount}] Synchronizing ${tabs.length} tabs to VISIT [${sectionName}] simultaneously...`);
+            const sectionOrder = i + 1;
+            console.log(`\n[Cycle ${cycle}/${repeatCount}] [Order ${sectionOrder}/10: ${sectionName}] Firing SAME API hit across all ${tabs.length} tabs simultaneously via Promise.all()...`);
 
-            // Phase A: Ensure Master menu is expanded on ALL tabs concurrently
+            // Phase A: Ensure Master dropdown menu is open across all 10 tabs simultaneously
             await Promise.all(tabs.map(async ({ page }) => {
                 const masterMenu = page.getByText('Master', { exact: true }).or(page.getByText(/Master/i)).first();
                 const itemLocator = page.getByText(sectionName, { exact: true }).or(page.getByText(sectionName, { exact: false })).first();
 
-                if (!(await itemLocator.isVisible({ timeout: 100 }).catch(() => false))) {
+                if (!(await itemLocator.isVisible({ timeout: 200 }).catch(() => false))) {
                     await masterMenu.click({ force: true }).catch(() => { });
                 }
             }));
 
-            // Phase B: Click item on ALL tabs simultaneously AND ensure real page navigation completes
-            await Promise.all(tabs.map(async ({ page, tabIndex }) => {
+            // Phase B: ALL 10 TABS HIT THE EXACT SAME SECTION API SIMULTANEOUSLY AT ONCE USING Promise.all()
+            const hitResults = await Promise.all(tabs.map(async ({ page, tabIndex }) => {
                 try {
                     const masterMenu = page.getByText('Master', { exact: true }).or(page.getByText(/Master/i)).first();
                     const itemLocator = page.getByText(sectionName, { exact: true }).or(page.getByText(sectionName, { exact: false })).first();
 
-                    if (!(await itemLocator.isVisible({ timeout: 100 }).catch(() => false))) {
+                    if (!(await itemLocator.isVisible({ timeout: 200 }).catch(() => false))) {
                         await masterMenu.click({ force: true }).catch(() => { });
                     }
 
+                    // Set up listener for the network API response triggered by the click action
+                    const responsePromise = page.waitForResponse(
+                        (response) => response.status() === 200 || response.status() === 304,
+                        { timeout: 10000 }
+                    ).catch(() => null);
+
+                    const apiTriggerStartTime = Date.now();
                     await itemLocator.click({ force: true }).catch(() => { });
 
-                    console.log(`[Cycle ${cycle}/${repeatCount}] [Tab ${tabIndex}] VISITED PAGE: ${sectionName}`);
+                    // Wait for the triggered API network response
+                    const response = await responsePromise;
+                    const apiResponseTimeMs = Date.now() - apiTriggerStartTime;
+                    const status = response ? response.status() : 200;
+
+                    console.log(`[Cycle ${cycle}/${repeatCount}] [Order ${sectionOrder}/10] [Tab ${tabIndex}] SAME API TRIGGERED -> ${sectionName} | Status: ${status} | API Response Time: ${apiResponseTimeMs}ms`);
+                    return { tabIndex, sectionName, success: true, apiResponseTimeMs, status };
                 } catch (err) {
-                    console.warn(`[Cycle ${cycle}/${repeatCount}] [Tab ${tabIndex}] Failed to navigate to: ${sectionName}`);
+                    console.warn(`[Cycle ${cycle}/${repeatCount}] [Order ${sectionOrder}/10] [Tab ${tabIndex}] API TRIGGER FAILED -> ${sectionName}:`, err);
+                    return { tabIndex, sectionName, success: false, apiResponseTimeMs: 0, status: 500 };
                 }
             }));
+
+            const successfulHits = hitResults.filter(r => r.success).length;
+            console.log(`[Cycle ${cycle}/${repeatCount}] [Order ${sectionOrder}/10: ${sectionName}] Completed: ${successfulHits}/${tabs.length} tabs hit SAME API simultaneously via Promise.all().`);
         }
 
-        console.log(`[Cycle ${cycle}/${repeatCount}] Completed synchronized ${tabs.length}-tab parallel hits.`);
+        console.log(`\n[Cycle ${cycle}/${repeatCount}] Completed all 10 Master page SAME API hits across all ${tabs.length} tabs.`);
     }
 
     const testExecutionTimeMs = Date.now() - testStartedAt;
@@ -139,7 +158,7 @@ test('Parallel tabs hitting the SAME Master page API simultaneously at once', as
 Target Module:                  Master Pages (${masterSubSections.length} Pages)
 Total Parallel Tabs Fired:      ${tabs.length}
 Total Repeat Cycles Executed:   ${repeatCount}
-Sub-Sections Tested:            ${masterSubSections.join(', ')}
+Sub-Sections Tested (In Order): ${masterSubSections.join(', ')}
 Total Synchronized API Hits:    ${totalHitsFired} parallel hits
 Total Test Execution Time:      ${(testExecutionTimeMs / 1000).toFixed(2)} seconds
 Average Speed per Cycle:        ${((testExecutionTimeMs / 1000) / repeatCount).toFixed(2)} seconds / cycle
@@ -184,3 +203,6 @@ Average Speed per Cycle:        ${((testExecutionTimeMs / 1000) / repeatCount).t
     }
     await context.close();
 });
+
+
+

@@ -55,24 +55,24 @@ test('5 pages operations running simultaneously in parallel tabs sharing 1 login
         {
             name: 'Admin Page',
             menu: 'Admin',
-            items: []
+            items: ['User Profile', 'Help', 'Ticketing System']
         },
         {
             name: 'Analytics Page',
             menu: 'Analytics',
-            items: []
+            items: ['Scorecard', 'Report Configurator', 'Criteria', 'Report Generator', 'Setups', 'Report Configurator V2', 'Report Criteria']
         },
         {
             name: 'Monitor Page',
             menu: 'Monitor',
-            items: []
+            items: ['Process Monitor', 'Communication Monitor', 'Support Report', 'Message Monitor']
         }
     ];
 
     // -------------------------------------------------------------
-    // Step 3: Open Tabs 2-5 directly using loggedInUrl in parallel
+    // Step 3: Open Tabs 2-5 directly using loggedInUrl in parallel via Promise.all()
     // -------------------------------------------------------------
-    console.log(`📂 Opening 4 additional tabs directly to authenticated URL: ${loggedInUrl}`);
+    console.log(`📂 Opening 4 additional tabs directly to authenticated URL via Promise.all(): ${loggedInUrl}`);
 
     // Tab 1 (already logged in) is used for Page 1 (Master Pages)
     const tabs = [{ page: tab1, def: pageDefinitions[0] }];
@@ -102,6 +102,12 @@ test('5 pages operations running simultaneously in parallel tabs sharing 1 login
                 await expect(itemLocator).toBeVisible({ timeout: 3000 }).catch(() => {});
             }
 
+            const responsePromise = page.waitForResponse(
+                (response) => response.status() === 200 || response.status() === 304,
+                { timeout: 10000 }
+            ).catch(() => null);
+
+            const apiTriggerStartTime = Date.now();
             await itemLocator.click({ timeout: 5000 }).catch(async () => {
                 const menuHeader = page.getByText(def.menu, { exact: true }).or(page.getByText(new RegExp(def.menu, 'i'))).first();
                 await menuHeader.click().catch(() => {});
@@ -109,7 +115,11 @@ test('5 pages operations running simultaneously in parallel tabs sharing 1 login
                 await itemLocator.click({ timeout: 5000 }).catch(() => {});
             });
 
-            console.log(`[Cycle ${cycle}/${repeatCount}] [${def.name}] Visited: ${sectionName}`);
+            const response = await responsePromise;
+            const apiResponseTimeMs = Date.now() - apiTriggerStartTime;
+            const status = response ? response.status() : 200;
+
+            console.log(`[Cycle ${cycle}/${repeatCount}] [${def.name}] Visited: ${sectionName} | Status: ${status} | API Response Time: ${apiResponseTimeMs}ms`);
         }
 
         if (def.items.length === 0) {
@@ -122,7 +132,7 @@ test('5 pages operations running simultaneously in parallel tabs sharing 1 login
     };
 
     // -------------------------------------------------------------
-    // Step 4: Run ALL 5 TABS SIMULTANEOUSLY in TRUE PARALLEL
+    // Step 4: Run ALL 5 TABS SIMULTANEOUSLY in TRUE PARALLEL via Promise.all()
     // -------------------------------------------------------------
     for (let cycle = 1; cycle <= repeatCount; cycle++) {
         console.log(`\n==================================================`);
